@@ -1,309 +1,240 @@
 #!/bin/bash
 
-# Test runner script for C Monorepo
-# Author: dunamismax <dunamismax@tutamail.com>
-# Version: 1.0.0
+# Test runner script for C Learning Demos
+# This script runs all tests and provides detailed reporting
 
-set -euo pipefail
+set -e
+
+echo "=== C Learning Demos Test Runner ==="
 
 # Colors for output
-RED='\033[31m'
-GREEN='\033[32m'
-YELLOW='\033[33m'
-BLUE='\033[34m'
-MAGENTA='\033[35m'
-CYAN='\033[36m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Test configuration
-BUILD_MODE="${MODE:-debug}"
-VERBOSE="${VERBOSE:-0}"
-COVERAGE="${COVERAGE:-0}"
-INDIVIDUAL="${INDIVIDUAL:-0}"
-
-# Directories
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BUILD_DIR="${PROJECT_ROOT}/build/${BUILD_MODE}"
-BIN_DIR="${BUILD_DIR}/bin"
-
-# Test executables
-TESTS=(
-    "test_math_utils"
-    "test_vector" 
-    "test_calculator"
-    "test_integration"
-)
-
-# Statistics
-TOTAL_TESTS=0
-PASSED_TESTS=0
-FAILED_TESTS=0
-FAILED_SUITES=()
-
-print_banner() {
-    echo -e "${CYAN}"
-    echo "╔══════════════════════════════════════════════════════════════════════╗"
-    echo "║                      C Monorepo Test Runner                         ║"
-    echo "║                                                                      ║"
-    echo "║  Mode: ${BUILD_MODE}$(printf '%*s' $((56 - ${#BUILD_MODE})) '')║"
-    echo "║  Coverage: $([ "$COVERAGE" = "1" ] && echo "Enabled" || echo "Disabled")$(printf '%*s' $((49 - $([ "$COVERAGE" = "1" ] && echo 7 || echo 8))) '')║"
-    echo "╚══════════════════════════════════════════════════════════════════════╝"
-    echo -e "${NC}"
+# Function to print colored output
+print_status() {
+    echo -e "${GREEN}[INFO]${NC} $1"
 }
 
-print_usage() {
-    echo "Usage: $0 [OPTIONS]"
-    echo ""
-    echo "Options:"
-    echo "  -h, --help          Show this help message"
-    echo "  -v, --verbose       Enable verbose output"
-    echo "  -c, --coverage      Enable coverage reporting (requires profile mode)"
-    echo "  -i, --individual    Run tests individually with detailed output"
-    echo "  -m, --mode MODE     Build mode (debug|release|profile, default: debug)"
-    echo ""
-    echo "Environment Variables:"
-    echo "  MODE                Build mode (debug|release|profile)"
-    echo "  VERBOSE             Enable verbose output (0|1)"
-    echo "  COVERAGE            Enable coverage (0|1)"
-    echo "  INDIVIDUAL          Run individual tests (0|1)"
-    echo ""
-    echo "Examples:"
-    echo "  $0                  Run all tests in debug mode"
-    echo "  $0 -m release       Run tests in release mode"
-    echo "  $0 -c -m profile    Run tests with coverage in profile mode"
-    echo "  $0 -i -v            Run individual tests with verbose output"
-}
-
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-log_warning() {
+print_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
-check_dependencies() {
-    log_info "Checking dependencies..."
-    
-    if ! command -v make >/dev/null 2>&1; then
-        log_error "make is required but not installed"
-        exit 1
-    fi
-    
-    if ! command -v clang >/dev/null 2>&1; then
-        log_error "clang is required but not installed"
-        exit 1
-    fi
-    
-    if [ "$COVERAGE" = "1" ] && [ "$BUILD_MODE" != "profile" ]; then
-        log_warning "Coverage requires profile mode, setting MODE=profile"
-        BUILD_MODE="profile"
-        BUILD_DIR="${PROJECT_ROOT}/build/${BUILD_MODE}"
-        BIN_DIR="${BUILD_DIR}/bin"
-    fi
-    
-    log_success "Dependencies check passed"
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
 }
 
-build_tests() {
-    log_info "Building applications and tests in ${BUILD_MODE} mode..."
-    
-    cd "$PROJECT_ROOT"
-    
-    # Build applications first (needed for integration tests)
-    local build_exit_code=0
-    
-    if [ "$VERBOSE" = "1" ]; then
-        make MODE="$BUILD_MODE" apps || build_exit_code=$?
-        if [ $build_exit_code -eq 0 ]; then
-            make MODE="$BUILD_MODE" build-tests || build_exit_code=$?
-        fi
-    else
-        make MODE="$BUILD_MODE" apps >/dev/null 2>&1 || build_exit_code=$?
-        if [ $build_exit_code -eq 0 ]; then
-            make MODE="$BUILD_MODE" build-tests >/dev/null 2>&1 || build_exit_code=$?
-        fi
-    fi
-    
-    if [ $build_exit_code -eq 0 ]; then
-        log_success "Applications and tests built successfully"
-    else
-        log_error "Failed to build applications and tests"
-        exit 1
-    fi
+print_test() {
+    echo -e "${BLUE}[TEST]${NC} $1"
 }
 
-run_single_test() {
-    local test_name="$1"
-    local test_path="${BIN_DIR}/${test_name}"
+# Check if we're in the right directory
+if [ ! -f "Makefile" ]; then
+    print_error "No Makefile found. Please run this script from the project root."
+    exit 1
+fi
+
+# Parse command line arguments
+BUILD_MODE="release"
+VERBOSE=false
+UNIT_TESTS=true
+INTEGRATION_TESTS=false
+PERFORMANCE_TESTS=false
+STOP_ON_FAILURE=false
+COVERAGE=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -m|--mode)
+            BUILD_MODE="$2"
+            shift 2
+            ;;
+        -v|--verbose)
+            VERBOSE=true
+            shift
+            ;;
+        -u|--unit-only)
+            UNIT_TESTS=true
+            INTEGRATION_TESTS=false
+            PERFORMANCE_TESTS=false
+            shift
+            ;;
+        -i|--integration)
+            INTEGRATION_TESTS=true
+            shift
+            ;;
+        -p|--performance)
+            PERFORMANCE_TESTS=true
+            shift
+            ;;
+        -a|--all)
+            UNIT_TESTS=true
+            INTEGRATION_TESTS=true
+            PERFORMANCE_TESTS=true
+            shift
+            ;;
+        -s|--stop-on-failure)
+            STOP_ON_FAILURE=true
+            shift
+            ;;
+        -c|--coverage)
+            COVERAGE=true
+            BUILD_MODE="profile"
+            shift
+            ;;
+        -h|--help)
+            echo "Usage: $0 [OPTIONS]"
+            echo "Options:"
+            echo "  -m, --mode MODE      Build mode (debug, release, profile)"
+            echo "  -v, --verbose        Verbose output"
+            echo "  -u, --unit-only      Run only unit tests (default)"
+            echo "  -i, --integration    Run integration tests"
+            echo "  -p, --performance    Run performance tests"
+            echo "  -a, --all            Run all tests"
+            echo "  -s, --stop-on-failure Stop on first failure"
+            echo "  -c, --coverage       Run with coverage analysis"
+            echo "  -h, --help           Show this help"
+            exit 0
+            ;;
+        *)
+            print_error "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+print_status "Test mode: $BUILD_MODE"
+print_status "Running tests..."
+
+# Build tests first
+print_status "Building tests..."
+if ! make MODE=$BUILD_MODE build-tests; then
+    print_error "Failed to build tests"
+    exit 1
+fi
+
+# Initialize test results
+TOTAL_TESTS=0
+PASSED_TESTS=0
+FAILED_TESTS=0
+SKIPPED_TESTS=0
+
+# Function to run a test
+run_test() {
+    local test_name=$1
+    local test_path=$2
     
-    if [ ! -x "$test_path" ]; then
-        log_error "Test executable not found: $test_path"
-        return 1
+    print_test "Running $test_name"
+    
+    if [ "$VERBOSE" = true ]; then
+        echo "  Command: $test_path"
     fi
     
-    echo -e "${CYAN}Running ${test_name}...${NC}"
-    
-    if [ "$VERBOSE" = "1" ]; then
-        "$test_path"
-        local exit_code=$?
+    # Run the test and capture output
+    if output=$($test_path 2>&1); then
+        echo -e "  ${GREEN}PASSED${NC}"
+        PASSED_TESTS=$((PASSED_TESTS + 1))
+        if [ "$VERBOSE" = true ]; then
+            echo "$output" | sed 's/^/    /'
+        fi
     else
-        local output
-        output=$("$test_path" 2>&1) || true
-        local exit_code=$?
+        echo -e "  ${RED}FAILED${NC}"
+        FAILED_TESTS=$((FAILED_TESTS + 1))
+        echo "$output" | sed 's/^/    /'
         
-        if [ $exit_code -eq 0 ]; then
-            local passed=$(echo "$output" | grep -o 'Tests passed: [0-9]*' | grep -o '[0-9]*' | head -1 || echo "")
-            local total=$(echo "$output" | grep -o 'Tests run: [0-9]*' | grep -o '[0-9]*' | head -1 || echo "")
-            
-            # Default to 0 if parsing fails
-            passed=${passed:-0}
-            total=${total:-0}
-            
-            echo -e "${GREEN}✓ $test_name: $passed/$total tests passed${NC}"
-            TOTAL_TESTS=$((TOTAL_TESTS + total))
-            PASSED_TESTS=$((PASSED_TESTS + passed))
-        else
-            echo -e "${RED}✗ $test_name: FAILED${NC}"
-            if [ "$VERBOSE" = "1" ]; then
-                echo "$output"
-            fi
-            FAILED_SUITES+=("$test_name")
+        if [ "$STOP_ON_FAILURE" = true ]; then
+            print_error "Stopping on first failure"
+            exit 1
         fi
     fi
     
-    return $exit_code
+    TOTAL_TESTS=$((TOTAL_TESTS + 1))
+    echo ""
 }
 
-run_tests() {
-    log_info "Running test suite..."
+# Run unit tests
+if [ "$UNIT_TESTS" = true ]; then
+    print_status "Running unit tests..."
     echo ""
     
-    local all_passed=0  # 0 = success in bash
-    
-    for test in "${TESTS[@]}"; do
-        if [ "$INDIVIDUAL" = "1" ]; then
-            echo -e "${BLUE}================================${NC}"
+    # Find all unit test executables
+    for test_file in build/$BUILD_MODE/bin/test_*; do
+        if [ -f "$test_file" ] && [ -x "$test_file" ]; then
+            test_name=$(basename "$test_file")
+            run_test "$test_name" "$test_file"
         fi
-        
-        if ! run_single_test "$test"; then
-            all_passed=1  # 1 = failure in bash
-            FAILED_TESTS=$((FAILED_TESTS + 1))
-        fi
-        
-        if [ "$INDIVIDUAL" = "1" ]; then
-            echo -e "${BLUE}--------------------------------${NC}"
-        fi
-        echo ""
     done
-    
-    return $all_passed
-}
+fi
 
-generate_coverage() {
-    if [ "$COVERAGE" = "1" ] && [ "$BUILD_MODE" = "profile" ]; then
-        log_info "Generating coverage report..."
-        
-        cd "$PROJECT_ROOT"
-        make coverage >/dev/null 2>&1
-        
-        if [ -d "build/coverage" ]; then
-            log_success "Coverage report generated in build/coverage/"
-        else
-            log_warning "Coverage report generation failed"
+# Run integration tests
+if [ "$INTEGRATION_TESTS" = true ]; then
+    print_status "Running integration tests..."
+    echo ""
+    
+    # Find all integration test executables
+    for test_file in build/$BUILD_MODE/bin/integration_*; do
+        if [ -f "$test_file" ] && [ -x "$test_file" ]; then
+            test_name=$(basename "$test_file")
+            run_test "$test_name" "$test_file"
         fi
-    fi
-}
-
-print_summary() {
-    echo ""
-    echo -e "${CYAN}╔══════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║               Test Summary                   ║${NC}"
-    echo -e "${CYAN}╚══════════════════════════════════════════════╝${NC}"
-    echo ""
-    
-    if [ "$INDIVIDUAL" = "0" ]; then
-        echo -e "Total tests:     ${BLUE}$TOTAL_TESTS${NC}"
-        echo -e "Passed tests:    ${GREEN}$PASSED_TESTS${NC}"
-        echo -e "Failed tests:    ${RED}$((TOTAL_TESTS - PASSED_TESTS))${NC}"
-    fi
-    
-    echo -e "Test suites:     ${BLUE}${#TESTS[@]}${NC}"
-    echo -e "Passed suites:   ${GREEN}$((${#TESTS[@]} - FAILED_TESTS))${NC}"
-    echo -e "Failed suites:   ${RED}$FAILED_TESTS${NC}"
-    
-    if [ ${#FAILED_SUITES[@]} -gt 0 ]; then
-        echo ""
-        echo -e "${RED}Failed test suites:${NC}"
-        for suite in "${FAILED_SUITES[@]}"; do
-            echo -e "  ${RED}✗${NC} $suite"
-        done
-    fi
-    
-    echo ""
-    if [ $FAILED_TESTS -eq 0 ]; then
-        echo -e "${GREEN}🎉 All test suites passed!${NC}"
-    else
-        echo -e "${RED}❌ Some test suites failed!${NC}"
-    fi
-}
-
-main() {
-    # Parse command line arguments
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            -h|--help)
-                print_usage
-                exit 0
-                ;;
-            -v|--verbose)
-                VERBOSE=1
-                shift
-                ;;
-            -c|--coverage)
-                COVERAGE=1
-                shift
-                ;;
-            -i|--individual)
-                INDIVIDUAL=1
-                shift
-                ;;
-            -m|--mode)
-                BUILD_MODE="$2"
-                BUILD_DIR="${PROJECT_ROOT}/build/${BUILD_MODE}"
-                BIN_DIR="${BUILD_DIR}/bin"
-                shift 2
-                ;;
-            *)
-                log_error "Unknown option: $1"
-                print_usage
-                exit 1
-                ;;
-        esac
     done
-    
-    print_banner
-    
-    check_dependencies
-    build_tests
-    
-    if run_tests; then
-        generate_coverage
-        print_summary
-        exit 0
-    else
-        generate_coverage
-        print_summary
-        exit 1
-    fi
-}
+fi
 
-main "$@"
+# Run performance tests
+if [ "$PERFORMANCE_TESTS" = true ]; then
+    print_status "Running performance tests..."
+    echo ""
+    
+    # Find all performance test executables
+    for test_file in build/$BUILD_MODE/bin/perf_*; do
+        if [ -f "$test_file" ] && [ -x "$test_file" ]; then
+            test_name=$(basename "$test_file")
+            run_test "$test_name" "$test_file"
+        fi
+    done
+fi
+
+# Generate coverage report if requested
+if [ "$COVERAGE" = true ]; then
+    print_status "Generating coverage report..."
+    
+    # Check if gcov is available
+    if command -v gcov > /dev/null 2>&1; then
+        mkdir -p coverage
+        
+        # Find all .gcda files and generate coverage
+        find build/$BUILD_MODE -name "*.gcda" -exec gcov {} \; > coverage/coverage.log 2>&1
+        
+        # Generate HTML report if lcov is available
+        if command -v lcov > /dev/null 2>&1 && command -v genhtml > /dev/null 2>&1; then
+            lcov --capture --directory build/$BUILD_MODE --output-file coverage/coverage.info
+            genhtml coverage/coverage.info --output-directory coverage/html
+            print_status "Coverage report generated in coverage/html/index.html"
+        else
+            print_warning "lcov/genhtml not found, basic coverage info in coverage/coverage.log"
+        fi
+    else
+        print_warning "gcov not found, skipping coverage report"
+    fi
+fi
+
+# Print final results
+echo "=== Test Results ==="
+echo "Total tests: $TOTAL_TESTS"
+echo "Passed: $PASSED_TESTS"
+echo "Failed: $FAILED_TESTS"
+echo "Skipped: $SKIPPED_TESTS"
+
+if [ $TOTAL_TESTS -eq 0 ]; then
+    print_warning "No tests were run!"
+    exit 1
+elif [ $FAILED_TESTS -eq 0 ]; then
+    print_status "All tests passed! ✓"
+    exit 0
+else
+    print_error "Some tests failed! ✗"
+    exit 1
+fi
