@@ -121,6 +121,7 @@ make run-password_generator
 ```
 
 **Learning Objectives:**
+
 - Variable declarations and basic data types
 - Input/output operations and formatting
 - Control flow structures (if/else, loops, switch)
@@ -144,6 +145,7 @@ make run-password_generator
 ```
 
 **Learning Objectives:**
+
 - System programming with POSIX APIs
 - Advanced file and directory operations
 - Parsing algorithms and recursive descent
@@ -162,6 +164,7 @@ make run-password_generator
 ```
 
 **Learning Objectives:**
+
 - Database storage and indexing systems
 - Compiler construction and language processing
 - Network programming and protocol implementation
@@ -226,7 +229,7 @@ void merge_sort(void* array, size_t size, size_t element_size, compare_func_t co
 void bubble_sort(void* array, size_t size, size_t element_size, compare_func_t compare);
 
 // Search algorithms
-size_t binary_search(const void* array, size_t size, size_t element_size, 
+size_t binary_search(const void* array, size_t size, size_t element_size,
                      const void* target, compare_func_t compare);
 size_t linear_search(const void* array, size_t size, size_t element_size,
                      const void* target, compare_func_t compare);
@@ -351,24 +354,28 @@ TEST_MAIN()
 ### Learning Objectives by Component
 
 **Memory Management:**
+
 - Dynamic allocation and deallocation strategies
 - Memory leak prevention and detection
 - Buffer overflow protection techniques
 - Stack vs heap usage patterns
 
 **Data Structures:**
+
 - Array operations and dynamic resizing
 - Linked list traversal and manipulation
 - Stack and queue implementations
 - Hash table concepts and collision handling
 
 **Algorithms:**
+
 - Sorting algorithm complexities and trade-offs
 - Search algorithm optimization
 - Recursive vs iterative approaches
 - Big O notation in practice
 
 **System Programming:**
+
 - File I/O and error handling
 - Process management and signals
 - Network programming concepts
@@ -384,13 +391,13 @@ bool safe_operation(const char* input, char* output, size_t output_size) {
     if (!input || !output || output_size == 0) {
         return false;  // Input validation
     }
-    
+
     // Operation with error checking
     if (some_system_call() != 0) {
         log_message("ERROR", "System call failed");
         return false;
     }
-    
+
     return true;
 }
 ```
@@ -402,13 +409,13 @@ bool safe_operation(const char* input, char* output, size_t output_size) {
 Resource* resource_create(size_t size) {
     Resource* res = safe_calloc(1, sizeof(Resource));
     if (!res) return NULL;
-    
+
     res->data = safe_calloc(size, sizeof(char));
     if (!res->data) {
         free(res);
         return NULL;
     }
-    
+
     return res;
 }
 
