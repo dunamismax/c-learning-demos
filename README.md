@@ -113,21 +113,14 @@ make run-password_generator
 # 3. Number Guessing Game - Control flow and logic
 ./build/release/bin/number_guessing
 
-# 4. Password Generator - String manipulation
+# 4. Password Generator - String manipulation and security
 ./build/release/bin/password_generator
 
 # 5. Text Analyzer - File I/O and statistics
 ./build/release/bin/text_analyzer sample.txt
 ```
 
-**Learning Objectives:**
-
-- Variable declarations and basic data types
-- Input/output operations and formatting
-- Control flow structures (if/else, loops, switch)
-- Functions and parameter passing
-- Arrays and string manipulation
-- Basic file operations
+**Learning Objectives:** Variable declarations, I/O operations, control flow, functions, arrays, string manipulation, and basic file operations.
 
 ### Intermediate Level - System Programming
 
@@ -140,35 +133,34 @@ make run-password_generator
 # 2. JSON Parser - Parsing algorithms and data structures
 ./build/release/bin/json_parser data.json
 
-# 3. Network Client - Socket programming (planned)
-# 4. Memory Pool - Advanced memory management (planned)
+# 3. Network Client - Socket programming and HTTP requests
+./build/release/bin/network_client
+
+# 4. Memory Pool - Advanced memory management
+./build/release/bin/memory_pool
 ```
 
-**Learning Objectives:**
-
-- System programming with POSIX APIs
-- Advanced file and directory operations
-- Parsing algorithms and recursive descent
-- Dynamic memory management
-- Error handling and defensive programming
+**Learning Objectives:** System programming with POSIX APIs, file operations, parsing algorithms, network programming, and advanced memory management.
 
 ### Advanced Level - Complex Systems
 
 **Master Advanced Programming Concepts:**
 
 ```bash
-# 1. Database Engine - Storage and indexing (planned)
-# 2. Compiler - Lexical analysis and parsing (planned)
-# 3. Web Server - Network programming and HTTP (planned)
-# 4. Thread Pool - Concurrent programming (planned)
+# 1. Database Engine - Storage systems and B-tree indexing
+./build/release/bin/database_engine
+
+# 2. Compiler - Lexical analysis, parsing, and code generation
+./build/release/bin/compiler
+
+# 3. Web Server - HTTP server and concurrent connections
+./build/release/bin/web_server
+
+# 4. Thread Pool - Concurrent programming and synchronization
+./build/release/bin/thread_pool
 ```
 
-**Learning Objectives:**
-
-- Database storage and indexing systems
-- Compiler construction and language processing
-- Network programming and protocol implementation
-- Concurrent programming and synchronization
+**Learning Objectives:** Database storage systems, compiler construction, network server programming, and concurrent programming with thread pools.
 
 ---
 
